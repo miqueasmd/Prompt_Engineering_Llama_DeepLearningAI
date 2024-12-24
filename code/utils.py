@@ -18,6 +18,54 @@ headers = {
 
 import time
 
+def code_llama(prompt, 
+               model="meta-llama/Llama-3.3-70B-Instruct-Turbo", 
+               temperature=0.0, 
+               max_tokens=1024,
+               verbose=False,
+               base=2,
+               max_tries=3):
+
+    url = "https://api.together.xyz/inference"  # Ensure this is the correct API endpoint
+
+    if model.endswith("Instruct"):
+        prompt = f"[INST]{prompt}[/INST]"
+
+    if verbose:
+        print(f"Prompt:\n{prompt}\n")
+        print(f"model: {model}")
+
+    data = {
+            "model": model,
+            "prompt": prompt,
+            "temperature": temperature,
+            "max_tokens": max_tokens
+        }
+
+    headers = {
+        "Authorization": f"Bearer {os.getenv('TOGETHER_API_KEY')}",
+        "Content-Type": "application/json"
+    }
+
+    wait_seconds = [base**i for i in range(max_tries)]
+    response = None
+    last_exception = None
+
+    for wait in wait_seconds:
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            return response.json()['output']['choices'][0]['text']
+        except Exception as e:
+            last_exception = e
+            print(f"Attempt failed, retrying in {wait} seconds...")
+            time.sleep(wait)
+    
+    if response is not None and response.status_code != 500:
+        return response.json()
+    else:
+        print(f"error message: {last_exception}")
+        return None
+    
 def llama(prompt, 
           add_inst=True,
           model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
