@@ -66,3 +66,50 @@ def llama(prompt,
     except Exception as e:
         print(f"Error: {str(e)}")
         return None
+    
+def llama_chat(prompts, responses, verbose=False):
+    """
+    Handle multi-turn conversations by maintaining context
+    """
+    # Create the conversation history
+    messages = []
+    
+    # Add all previous turns to the conversation
+    for i in range(len(responses)):
+        messages.append({"role": "user", "content": prompts[i]})
+        messages.append({"role": "assistant", "content": responses[i]})
+    
+    # Add the current prompt
+    messages.append({"role": "user", "content": prompts[-1]})
+    
+    client = Together()
+    
+    try:
+        response = client.chat.completions.create(
+            model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            messages=messages,
+            max_tokens=1024,
+            temperature=0.7,
+            top_p=0.7,
+            top_k=50,
+            repetition_penalty=1,
+            stop=["<|eot_id|>", "<|eom_id|>"]
+        )
+        
+        if verbose:
+            print("Full conversation:")
+            for msg in messages:
+                print(f"{msg['role']}: {msg['content']}\n")
+            
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return None
+
+def get_prompt_chat(prompts, responses):
+    prompt_chat = f"<s>[INST] {prompts[0]} [/INST]"
+    for n, response in enumerate(responses):
+        prompt = prompts[n + 1]
+        prompt_chat += f"\n{response}\n </s><s>[INST] \n{prompt}\n [/INST]"
+
+    return prompt_chat
